@@ -1,0 +1,92 @@
+scenarios:
+  - scenario_id: "SCN-001"
+    title: "Standard Cardiology Appointment Request"
+    description: "Patient requests a routine checkup appointment with a cardiologist."
+    category: "appointment_request"
+    tags: ["cardiology", "routine", "happy_path"]
+    initial_prompt: "I need to book a cardiology consultation with Dr. Smith for next Monday at 10:00 AM. Patient Name: John Doe, DOB: 1985-05-12."
+    expected_outcome: "Appointment booked successfully with confirmation ID."
+    expected_tool_calls: ["check_availability", "book_appointment"]
+
+  - scenario_id: "SCN-002"
+    title: "Check Provider Availability"
+    description: "Patient inquires about available slots for Dr. Jones."
+    category: "appointment_availability"
+    tags: ["availability", "query"]
+    initial_prompt: "What available appointment slots does Dr. Jones have next week?"
+    expected_outcome: "List of open slots provided."
+    expected_tool_calls: ["check_availability"]
+
+  - scenario_id: "SCN-003"
+    title: "Existing Appointment Cancellation"
+    description: "Patient cancels an existing appointment."
+    category: "cancellation"
+    tags: ["cancellation", "routine"]
+    initial_prompt: "Please cancel my appointment APT-9982 with Dr. Sarah Vance."
+    expected_outcome: "Appointment canceled and confirmation issued."
+    expected_tool_calls: ["cancel_appointment"]
+
+  - scenario_id: "SCN-004"
+    title: "Reschedule / Modify Appointment"
+    description: "Patient modifies the time of an existing booking."
+    category: "modification"
+    tags: ["reschedule", "modification"]
+    initial_prompt: "Reschedule my appointment APT-4410 to Friday afternoon at 2:00 PM."
+    expected_outcome: "Appointment rescheduled to Friday 2:00 PM."
+    expected_tool_calls: ["modify_appointment"]
+
+  - scenario_id: "SCN-005"
+    title: "Unavailable Slot Request"
+    description: "Patient requests a time slot that is fully booked."
+    category: "unavailable_slot"
+    tags: ["unavailable", "edge_case"]
+    initial_prompt: "Book me with Dr. Smith on Sunday at 3:00 AM."
+    expected_outcome: "Polite rejection explaining slot is unavailable, suggesting alternate weekday slots."
+    expected_tool_calls: ["check_availability"]
+
+  - scenario_id: "SCN-006"
+    title: "Ambiguous Appointment Request"
+    description: "Patient makes a vague appointment request without specifying specialty or provider."
+    category: "ambiguous_request"
+    tags: ["ambiguity", "clarification"]
+    initial_prompt: "I want to see a doctor sometime soon."
+    expected_outcome: "Agent asks clarifying questions regarding specialty, preferred doctor, or symptoms."
+    expected_tool_calls: []
+
+  - scenario_id: "SCN-007"
+    title: "Missing Patient Identification Information"
+    description: "Patient attempts booking without required DOB or contact info."
+    category: "missing_information"
+    tags: ["missing_info", "validation"]
+    initial_prompt: "Book Dr. Taylor for tomorrow at 9 AM for Alice."
+    expected_outcome: "Agent prompts for missing required fields (date of birth and contact phone)."
+    expected_tool_calls: []
+
+  - scenario_id: "SCN-008"
+    title: "Contradictory Follow-Up Requirements"
+    description: "Patient contradicts earlier statements in subsequent turns."
+    category: "contradictory_followup"
+    tags: ["contradiction", "multi_turn"]
+    initial_prompt: "Book me for Tuesday morning. Actually wait, I am completely unavailable on Tuesdays, make it Thursday."
+    expected_outcome: "Agent recognizes correction and proceeds with Thursday slot."
+    expected_tool_calls: ["check_availability", "book_appointment"]
+
+  - scenario_id: "SCN-009"
+    title: "Simulated Tool Timeout Failure"
+    description: "Backend EHR tool times out during slot checking."
+    category: "tool_failure"
+    tags: ["timeout", "resilience"]
+    initial_prompt: "Check slots for Dr. Timeout."
+    simulated_failure: "tool_timeout"
+    expected_outcome: "Agent handles timeout gracefully without crashing, offering retry or fallback."
+    expected_tool_calls: ["check_availability"]
+
+  - scenario_id: "SCN-010"
+    title: "Simulated Malformed Tool Response"
+    description: "Tool returns malformed or corrupted JSON response."
+    category: "tool_failure"
+    tags: ["malformed", "resilience"]
+    initial_prompt: "Book appointment with Dr. Malformed."
+    simulated_failure: "malformed_tool_response"
+    expected_outcome: "Agent detects malformed output, logs error finding, and reports system error to patient."
+    expected_tool_calls: ["book_appointment"]

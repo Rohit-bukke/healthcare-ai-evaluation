@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Healthcare AI Evaluation & Quality Dashboard</title>
+
+  <!-- Google Font: Source Sans Pro -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <!-- AdminLTE 4 CSS (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/css/adminlte.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .brand-text { font-weight: 700; color: #0d6efd; }
+    .card-title { font-weight: 600; }
+    .badge-critical { background-color: #dc3545; color: #fff; }
+    .badge-high { background-color: #fd7e14; color: #fff; }
+    .badge-medium { background-color: #ffc107; color: #212529; }
+    .badge-low { background-color: #0dcaf0; color: #212529; }
+  </style>
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+  <div class="app-wrapper">
+    <!-- Navbar -->
+    <nav class="app-header navbar navbar-expand bg-body shadow-sm">
+      <div class="container-fluid">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button"><i class="fas fa-bars"></i></a>
+          </li>
+          <li class="nav-item d-none d-md-block ms-3 navbar-brand">
+            <i class="fas fa-heartpulse text-danger me-2"></i>
+            <span class="brand-text">Healthcare AI Evaluation Framework</span>
+          </li>
+        </ul>
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <button class="btn btn-outline-primary btn-sm me-2" onclick="triggerEvaluationRun()">
+              <i class="fas fa-play me-1"></i> Run Benchmark Evaluation
+            </button>
+          </li>
+          <li class="nav-item">
+            <span class="badge bg-success p-2" id="db-status-badge"><i class="fas fa-database me-1"></i> Database Connected</span>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Sidebar -->
+    <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+      <div class="sidebar-brand">
+        <a href="#" class="brand-link">
+          <span class="brand-text fw-bold">Healthcare AI QA</span>
+        </a>
+      </div>
+      <div class="sidebar-wrapper">
+        <nav class="mt-2">
+          <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
+            <li class="nav-item">
+              <a href="#" class="nav-link active">
+                <i class="nav-icon fas fa-chart-line"></i>
+                <p>Quality Dashboard</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#runs-section" class="nav-link">
+                <i class="nav-icon fas fa-list-check"></i>
+                <p>Evaluation Runs</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#findings-section" class="nav-link">
+                <i class="nav-icon fas fa-bug"></i>
+                <p>Root Cause Findings</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-main p-4">
+      <div class="app-content-header mb-4">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-sm-6">
+              <h3 class="mb-0 fw-bold">AI Agent Quality & Safety Dashboard</h3>
+              <p class="text-muted small">Real-time benchmarking, accuracy metrics, tool correctness, and root-cause analysis.</p>
+            </div>
+            <div class="col-sm-6 text-end">
+              <span class="text-muted small" id="last-updated">Last Updated: Just now</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-content">
+        <div class="container-fluid">
+          <!-- Summary Cards Row -->
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-md-3">
+              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-primary border-4">
+                <span class="info-box-icon text-primary float-end"><i class="fas fa-vial fa-2x"></i></span>
+                <div class="info-box-content">
+                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Total Runs</span>
+                  <h4 class="info-box-number fw-bold mb-0" id="stat-total-runs">0</h4>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
+              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-success border-4">
+                <span class="info-box-icon text-success float-end"><i class="fas fa-bullseye fa-2x"></i></span>
+                <div class="info-box-content">
+                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Overall Accuracy</span>
+                  <h4 class="info-box-number fw-bold mb-0" id="stat-accuracy">0.0%</h4>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
+              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-info border-4">
+                <span class="info-box-icon text-info float-end"><i class="fas fa-wrench fa-2x"></i></span>
+                <div class="info-box-content">
+                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Tool Correctness</span>
+                  <h4 class="info-box-number fw-bold mb-0" id="stat-tool-correctness">0.0%</h4>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
+              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-warning border-4">
+                <span class="info-box-icon text-warning float-end"><i class="fas fa-tachometer-alt fa-2x"></i></span>
+                <div class="info-box-content">
+                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Avg Latency</span>
+                  <h4 class="info-box-number fw-bold mb-0" id="stat-latency">0 ms</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-8">
+              <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-0 fw-bold">
+                  <i class="fas fa-chart-bar text-primary me-2"></i> Accuracy & Tool Execution Trends
+                </div>
+                <div class="card-body">
+                  <canvas id="accuracyChart" height="120"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-0 fw-bold">
+                  <i class="fas fa-exclamation-triangle text-warning me-2"></i> Findings Severity Distribution
+                </div>
+                <div class="card-body">
+                  <canvas id="severityChart" height="200"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Evaluation Runs Table -->
+          <div class="row g-3 mb-4" id="runs-section">
+            <div class="col-12">
+              <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0 fw-bold"><i class="fas fa-history text-secondary me-2"></i> Recent Evaluation Runs</h5>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="loadDashboardData()"><i class="fas fa-sync-alt me-1"></i> Refresh</button>
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Run ID</th>
+                          <th>Agent ID</th>
+                          <th>Status</th>
+                          <th>Scenarios</th>
+                          <th>Accuracy</th>
+                          <th>Tool Correctness</th>
+                          <th>Avg Latency</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="runs-table-body">
+                        <tr><td colspan="8" class="text-center text-muted py-4">No evaluation runs recorded yet. Click "Run Benchmark Evaluation" to start.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Findings Table -->
+          <div class="row g-3" id="findings-section">
+            <div class="col-12">
+              <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0">
+                  <h5 class="mb-0 fw-bold"><i class="fas fa-bug text-danger me-2"></i> Detected Findings & RCA</h5>
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Finding ID</th>
+                          <th>Severity</th>
+                          <th>Category</th>
+                          <th>Title</th>
+                          <th>Description</th>
+                          <th>Recommendation</th>
+                        </tr>
+                      </thead>
+                      <tbody id="findings-table-body">
+                        <tr><td colspan="6" class="text-center text-muted py-4">No critical findings recorded.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- AdminLTE 4 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/js/adminlte.min.js"></script>
+
+  <script>
+    let accuracyChart = null;
+    let severityChart = null;
+
+    async function loadDashboardData() {
+      try {
+        const response = await fetch('/api/v1/dashboard/summary');
+        const data = await response.json();
+
+        // Update Stat Cards
+        document.getElementById('stat-total-runs').textContent = data.total_runs;
+        document.getElementById('stat-accuracy').textContent = (data.overall_accuracy * 100).toFixed(1) + '%';
+        document.getElementById('stat-tool-correctness').textContent = (data.tool_correctness * 100).toFixed(1) + '%';
+        document.getElementById('stat-latency').textContent = Math.round(data.average_latency_ms) + ' ms';
+        document.getElementById('last-updated').textContent = 'Last Updated: ' + new Date().toLocaleTimeString();
+
+        // Update Runs Table
+        const runsTbody = document.getElementById('runs-table-body');
+        if (data.runs && data.runs.length > 0) {
+          runsTbody.innerHTML = data.runs.map(run => `
+            <tr>
+              <td class="fw-bold">${run.run_id}</td>
+              <td><span class="badge bg-secondary">${run.agent_id}</span></td>
+              <td><span class="badge bg-${run.status === 'completed' ? 'success' : 'warning'}">${run.status}</span></td>
+              <td>${run.passed_count}/${run.total_scenarios} Passed</td>
+              <td><span class="fw-semibold text-${run.overall_accuracy >= 0.8 ? 'success' : 'danger'}">${(run.overall_accuracy * 100).toFixed(1)}%</span></td>
+              <td>${(run.tool_correctness * 100).toFixed(1)}%</td>
+              <td>${Math.round(run.average_latency_ms)} ms</td>
+              <td><button class="btn btn-sm btn-outline-info" onclick="viewRunDetails('${run.run_id}')">View</button></td>
+            </tr>
+          `).join('');
+        }
+
+        // Update Findings Table
+        const findingsTbody = document.getElementById('findings-table-body');
+        if (data.findings && data.findings.length > 0) {
+          findingsTbody.innerHTML = data.findings.map(f => `
+            <tr>
+              <td class="fw-bold">${f.finding_id}</td>
+              <td><span class="badge badge-${f.severity}">${f.severity.toUpperCase()}</span></td>
+              <td><span class="badge bg-light text-dark">${f.category}</span></td>
+              <td>${f.title}</td>
+              <td>${f.description}</td>
+              <td class="text-muted small">${f.recommendation || 'N/A'}</td>
+            </tr>
+          `).join('');
+        }
+
+        // Render / Update Charts
+        renderCharts(data);
+
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+      }
+    }
+
+    function renderCharts(data) {
+      // Accuracy Chart
+      const ctxAcc = document.getElementById('accuracyChart').getContext('2d');
+      if (accuracyChart) accuracyChart.destroy();
+      accuracyChart = new Chart(ctxAcc, {
+        type: 'line',
+        data: {
+          labels: data.runs ? data.runs.map(r => r.run_id) : ['Baseline'],
+          datasets: [
+            {
+              label: 'Overall Accuracy %',
+              data: data.runs ? data.runs.map(r => r.overall_accuracy * 100) : [100],
+              borderColor: '#0d6efd',
+              tension: 0.3,
+              fill: false
+            },
+            {
+              label: 'Tool Correctness %',
+              data: data.runs ? data.runs.map(r => r.tool_correctness * 100) : [100],
+              borderColor: '#198754',
+              tension: 0.3,
+              fill: false
+            }
+          ]
+        },
+        options: { responsive: true, scales: { y: { min: 0, max: 100 } } }
+      });
+
+      // Severity Chart
+      const ctxSev = document.getElementById('severityChart').getContext('2d');
+      if (severityChart) severityChart.destroy();
+      const sevCounts = data.severity_counts || { critical: 0, high: 0, medium: 0, low: 0 };
+      severityChart = new Chart(ctxSev, {
+        type: 'doughnut',
+        data: {
+          labels: ['Critical', 'High', 'Medium', 'Low'],
+          datasets: [{
+            data: [sevCounts.critical, sevCounts.high, sevCounts.medium, sevCounts.low],
+            backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#0dcaf0']
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+
+    async function triggerEvaluationRun() {
+      try {
+        const res = await fetch('/api/v1/runs/execute', { method: 'POST' });
+        const runData = await res.json();
+        alert('Evaluation Run Completed! Run ID: ' + runData.run_id + ' | Accuracy: ' + (runData.overall_accuracy * 100).toFixed(1) + '%');
+        loadDashboardData();
+      } catch (err) {
+        alert('Failed to execute evaluation run: ' + err);
+      }
+    }
+
+    // Auto-load on page ready
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
+  </script>
+</body>
+</html>
