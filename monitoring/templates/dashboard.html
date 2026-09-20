@@ -1,363 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Healthcare AI Evaluation & Quality Dashboard</title>
-
-  <!-- Google Font: Source Sans Pro -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Bootstrap 5 CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <!-- AdminLTE 4 CSS (CDN) -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Healthcare AI Evaluation & Quality Dashboard — real-time evaluation metrics, safety monitoring, and drift detection">
+  <title>Healthcare AI Evaluation &amp; Quality Dashboard</title>
+  <!-- AdminLTE 4 CSS via CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/css/adminlte.min.css">
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
-    .brand-text { font-weight: 700; color: #0d6efd; }
-    .card-title { font-weight: 600; }
-    .badge-critical { background-color: #dc3545; color: #fff; }
-    .badge-high { background-color: #fd7e14; color: #fff; }
-    .badge-medium { background-color: #ffc107; color: #212529; }
-    .badge-low { background-color: #0dcaf0; color: #212529; }
+    .metric-card { transition: transform .2s; }
+    .metric-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,.15); }
+    .safety-critical { border-left: 4px solid #dc3545; }
+    .safety-warning  { border-left: 4px solid #fd7e14; }
+    .drift-alert     { border-left: 4px solid #ffc107; }
+    .status-badge-pass { background:#198754; color:#fff; padding:2px 8px; border-radius:12px; font-size:.75rem; }
+    .status-badge-fail { background:#dc3545; color:#fff; padding:2px 8px; border-radius:12px; font-size:.75rem; }
+    .loading { opacity:0.5; }
+    #last-refresh { font-size:.8rem; color:#6c757d; }
+    .safety-note { font-size:.75rem; color:#adb5bd; margin-top:.3rem; }
+    .regression-card { border-left: 4px solid #6f42c1; }
+    .benchmark-card  { border-left: 4px solid #0dcaf0; }
+    .metric-delta-negative { color: #dc3545; font-weight: bold; }
+    .metric-delta-positive { color: #198754; font-weight: bold; }
   </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
-  <div class="app-wrapper">
-    <!-- Navbar -->
-    <nav class="app-header navbar navbar-expand bg-body shadow-sm">
-      <div class="container-fluid">
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button"><i class="fas fa-bars"></i></a>
-          </li>
-          <li class="nav-item d-none d-md-block ms-3 navbar-brand">
-            <i class="fas fa-heartpulse text-danger me-2"></i>
-            <span class="brand-text">Healthcare AI Evaluation Framework</span>
-          </li>
-        </ul>
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <button class="btn btn-outline-primary btn-sm me-2" onclick="triggerEvaluationRun()">
-              <i class="fas fa-play me-1"></i> Run Benchmark Evaluation
-            </button>
-          </li>
-          <li class="nav-item">
-            <span class="badge bg-success p-2" id="db-status-badge"><i class="fas fa-database me-1"></i> Database Connected</span>
-          </li>
-        </ul>
-      </div>
-    </nav>
+<div class="app-wrapper">
 
-    <!-- Main Sidebar -->
-    <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
-      <div class="sidebar-brand">
-        <a href="#" class="brand-link">
-          <span class="brand-text fw-bold">Healthcare AI QA</span>
-        </a>
-      </div>
-      <div class="sidebar-wrapper">
-        <nav class="mt-2">
-          <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
-            <li class="nav-item">
-              <a href="#" class="nav-link active">
-                <i class="nav-icon fas fa-chart-line"></i>
-                <p>Quality Dashboard</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="#runs-section" class="nav-link">
-                <i class="nav-icon fas fa-list-check"></i>
-                <p>Evaluation Runs</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="#findings-section" class="nav-link">
-                <i class="nav-icon fas fa-bug"></i>
-                <p>Root Cause Findings</p>
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </aside>
+  <!-- Navbar -->
+  <nav class="app-header navbar navbar-expand bg-dark" data-bs-theme="dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/dashboard">
+        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>
+        Healthcare AI Evaluation &amp; Quality Dashboard
+      </a>
+      <span class="navbar-text text-secondary ms-auto" id="last-refresh">Loading...</span>
+    </div>
+  </nav>
 
-    <!-- Main Content -->
-    <main class="app-main p-4">
-      <div class="app-content-header mb-4">
-        <div class="container-fluid">
-          <div class="row">
-            <div class="col-sm-6">
-              <h3 class="mb-0 fw-bold">AI Agent Quality & Safety Dashboard</h3>
-              <p class="text-muted small">Real-time benchmarking, accuracy metrics, tool correctness, and root-cause analysis.</p>
+  <!-- Sidebar -->
+  <aside class="app-sidebar bg-dark sidebar-dark-primary shadow" data-bs-theme="dark">
+    <div class="sidebar-brand">
+      <span class="brand-text fw-bold">QA Dashboard</span>
+    </div>
+    <div class="sidebar-wrapper">
+      <nav class="mt-2">
+        <ul class="nav sidebar-menu flex-column" role="menu">
+          <li class="nav-item"><a href="#overview" class="nav-link"><i class="bi bi-speedometer2 nav-icon"></i><p>Overview</p></a></li>
+          <li class="nav-item"><a href="#quality" class="nav-link"><i class="bi bi-graph-up nav-icon"></i><p>Quality Metrics</p></a></li>
+          <li class="nav-item"><a href="#failures" class="nav-link"><i class="bi bi-exclamation-triangle nav-icon"></i><p>Failure Breakdown</p></a></li>
+          <li class="nav-item"><a href="#safety" class="nav-link"><i class="bi bi-shield-exclamation nav-icon"></i><p>Safety</p></a></li>
+          <li class="nav-item"><a href="#benchmarks" class="nav-link"><i class="bi bi-trophy nav-icon"></i><p>Benchmark</p></a></li>
+          <li class="nav-item"><a href="#regression" class="nav-link"><i class="bi bi-arrow-left-right nav-icon"></i><p>Regression</p></a></li>
+          <li class="nav-item"><a href="#findings" class="nav-link"><i class="bi bi-bug nav-icon"></i><p>Findings</p></a></li>
+          <li class="nav-item"><a href="#alerts" class="nav-link"><i class="bi bi-bell nav-icon"></i><p>Drift Alerts</p></a></li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="app-main">
+    <div class="app-content-header py-3 px-4">
+      <h1 class="h3 mb-0"><i class="bi bi-heart-pulse me-2 text-danger"></i>Healthcare AI Evaluation &amp; Quality Dashboard</h1>
+      <small class="text-muted">Real-time evaluation metrics, safety monitoring, benchmark tracking, and drift detection</small>
+    </div>
+
+    <div class="app-content px-4 pb-4">
+
+      <!-- Overview KPI Cards -->
+      <section id="overview" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-speedometer2 me-2"></i>General Quality Overview</h5>
+        <div class="row g-3" id="kpi-cards">
+          <div class="col-6 col-md-3">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body text-center">
+                <div class="text-muted small">Evaluation Runs</div>
+                <div class="h2 fw-bold text-primary" id="kpi-runs">–</div>
+              </div>
             </div>
-            <div class="col-sm-6 text-end">
-              <span class="text-muted small" id="last-updated">Last Updated: Just now</span>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body text-center">
+                <div class="text-muted small">Total Scenarios</div>
+                <div class="h2 fw-bold text-info" id="kpi-scenarios">–</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body text-center">
+                <div class="text-muted small">Overall Accuracy</div>
+                <div class="h2 fw-bold text-success" id="kpi-accuracy">–</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body text-center">
+                <div class="text-muted small">Avg Latency (ms)</div>
+                <div class="h2 fw-bold text-secondary" id="kpi-latency">–</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="app-content">
-        <div class="container-fluid">
-          <!-- Summary Cards Row -->
-          <div class="row g-3 mb-4">
-            <div class="col-12 col-sm-6 col-md-3">
-              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-primary border-4">
-                <span class="info-box-icon text-primary float-end"><i class="fas fa-vial fa-2x"></i></span>
-                <div class="info-box-content">
-                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Total Runs</span>
-                  <h4 class="info-box-number fw-bold mb-0" id="stat-total-runs">0</h4>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-sm-6 col-md-3">
-              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-success border-4">
-                <span class="info-box-icon text-success float-end"><i class="fas fa-bullseye fa-2x"></i></span>
-                <div class="info-box-content">
-                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Overall Accuracy</span>
-                  <h4 class="info-box-number fw-bold mb-0" id="stat-accuracy">0.0%</h4>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-sm-6 col-md-3">
-              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-info border-4">
-                <span class="info-box-icon text-info float-end"><i class="fas fa-wrench fa-2x"></i></span>
-                <div class="info-box-content">
-                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Tool Correctness</span>
-                  <h4 class="info-box-number fw-bold mb-0" id="stat-tool-correctness">0.0%</h4>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-sm-6 col-md-3">
-              <div class="info-box bg-white p-3 rounded shadow-sm border-start border-warning border-4">
-                <span class="info-box-icon text-warning float-end"><i class="fas fa-tachometer-alt fa-2x"></i></span>
-                <div class="info-box-content">
-                  <span class="info-box-text text-muted text-uppercase small font-weight-bold">Avg Latency</span>
-                  <h4 class="info-box-number fw-bold mb-0" id="stat-latency">0 ms</h4>
-                </div>
+      <!-- Quality Metrics -->
+      <section id="quality" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-graph-up me-2"></i>Quality Metrics</h5>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body">
+                <div class="text-muted small">Tool Correctness</div>
+                <div class="h4 fw-bold" id="metric-tool">–</div>
+                <div class="progress mt-2" style="height:6px"><div class="progress-bar bg-primary" id="bar-tool" style="width:0%"></div></div>
               </div>
             </div>
           </div>
-
-          <!-- Charts Row -->
-          <div class="row g-3 mb-4">
-            <div class="col-12 col-md-8">
-              <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white border-0 fw-bold">
-                  <i class="fas fa-chart-bar text-primary me-2"></i> Accuracy & Tool Execution Trends
-                </div>
-                <div class="card-body">
-                  <canvas id="accuracyChart" height="120"></canvas>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-              <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white border-0 fw-bold">
-                  <i class="fas fa-exclamation-triangle text-warning me-2"></i> Findings Severity Distribution
-                </div>
-                <div class="card-body">
-                  <canvas id="severityChart" height="200"></canvas>
-                </div>
+          <div class="col-md-4">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body">
+                <div class="text-muted small">Argument Correctness</div>
+                <div class="h4 fw-bold" id="metric-args">–</div>
+                <div class="progress mt-2" style="height:6px"><div class="progress-bar bg-info" id="bar-args" style="width:0%"></div></div>
               </div>
             </div>
           </div>
-
-          <!-- Evaluation Runs Table -->
-          <div class="row g-3 mb-4" id="runs-section">
-            <div class="col-12">
-              <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                  <h5 class="mb-0 fw-bold"><i class="fas fa-history text-secondary me-2"></i> Recent Evaluation Runs</h5>
-                  <button class="btn btn-sm btn-outline-secondary" onclick="loadDashboardData()"><i class="fas fa-sync-alt me-1"></i> Refresh</button>
-                </div>
-                <div class="card-body p-0">
-                  <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                      <thead class="table-light">
-                        <tr>
-                          <th>Run ID</th>
-                          <th>Agent ID</th>
-                          <th>Status</th>
-                          <th>Scenarios</th>
-                          <th>Accuracy</th>
-                          <th>Tool Correctness</th>
-                          <th>Avg Latency</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody id="runs-table-body">
-                        <tr><td colspan="8" class="text-center text-muted py-4">No evaluation runs recorded yet. Click "Run Benchmark Evaluation" to start.</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+          <div class="col-md-4">
+            <div class="card metric-card shadow-sm">
+              <div class="card-body">
+                <div class="text-muted small">Grounding Accuracy</div>
+                <div class="h4 fw-bold" id="metric-grounding">–</div>
+                <div class="progress mt-2" style="height:6px"><div class="progress-bar bg-success" id="bar-grounding" style="width:0%"></div></div>
               </div>
             </div>
           </div>
-
-          <!-- Findings Table -->
-          <div class="row g-3" id="findings-section">
-            <div class="col-12">
-              <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-0">
-                  <h5 class="mb-0 fw-bold"><i class="fas fa-bug text-danger me-2"></i> Detected Findings & RCA</h5>
-                </div>
-                <div class="card-body p-0">
-                  <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                      <thead class="table-light">
-                        <tr>
-                          <th>Finding ID</th>
-                          <th>Severity</th>
-                          <th>Category</th>
-                          <th>Title</th>
-                          <th>Description</th>
-                          <th>Recommendation</th>
-                        </tr>
-                      </thead>
-                      <tbody id="findings-table-body">
-                        <tr><td colspan="6" class="text-center text-muted py-4">No critical findings recorded.</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
-    </main>
-  </div>
+      </section>
 
-  <!-- Bootstrap 5 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- AdminLTE 4 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/js/adminlte.min.js"></script>
+      <!-- Failure Breakdown -->
+      <section id="failures" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-exclamation-triangle me-2"></i>Failure Breakdown</h5>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="card shadow-sm metric-card">
+              <div class="card-body text-center">
+                <div class="text-muted small">Scenario Failures</div>
+                <div class="h3 fw-bold text-danger" id="fail-scenario">–</div>
+                <div class="safety-note">Total scenarios that did not pass across all runs</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card shadow-sm metric-card">
+              <div class="card-body text-center">
+                <div class="text-muted small">Tool Failures</div>
+                <div class="h3 fw-bold text-warning" id="fail-tool">–</div>
+                <div class="safety-note">Tool call errors, timeouts, malformed responses</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card shadow-sm metric-card">
+              <div class="card-body text-center">
+                <div class="text-muted small">Integration Failures</div>
+                <div class="h3 fw-bold text-orange" id="fail-integration">–</div>
+                <div class="safety-note">Systemic integration / backend errors</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  <script>
-    let accuracyChart = null;
-    let severityChart = null;
+      <!-- Safety Panel — Always Separate -->
+      <section id="safety" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-shield-exclamation me-2"></i>Safety Monitoring
+          <span class="badge bg-danger ms-2" id="safety-badge">TRACKED SEPARATELY</span>
+        </h5>
+        <div class="alert alert-warning py-2 mb-3" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          <strong>Safety violations are never folded into the overall accuracy score.</strong>
+          They are independently tracked, separately displayed, and may act as hard release blockers.
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="card shadow-sm safety-critical metric-card">
+              <div class="card-body">
+                <div class="text-muted small">Total Safety Violations</div>
+                <div class="h3 fw-bold text-danger" id="safety-total">–</div>
+                <div class="safety-note">Tracked independently — never folded into accuracy score</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card shadow-sm safety-critical metric-card">
+              <div class="card-body">
+                <div class="text-muted small">Critical Safety Failures</div>
+                <div class="h3 fw-bold text-danger" id="safety-critical">–</div>
+                <div class="safety-note">Emergency escalation failures, PHI violations, injection bypass</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card shadow-sm safety-warning metric-card">
+              <div class="card-body">
+                <div class="text-muted small">High Safety Failures</div>
+                <div class="h3 fw-bold text-warning" id="safety-high">–</div>
+                <div class="safety-note">Scope refusal failures, medication, diagnosis boundary violations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    async function loadDashboardData() {
-      try {
-        const response = await fetch('/api/v1/dashboard/summary');
-        const data = await response.json();
+      <!-- Benchmark Panel -->
+      <section id="benchmarks" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-trophy me-2"></i>Latest Benchmark</h5>
+        <div class="card shadow-sm benchmark-card">
+          <div class="card-body" id="benchmark-panel">
+            <div class="text-muted">No benchmark data available. Run a benchmark via <code>POST /api/v1/benchmarks/run</code></div>
+          </div>
+        </div>
+      </section>
 
-        // Update Stat Cards
-        document.getElementById('stat-total-runs').textContent = data.total_runs;
-        document.getElementById('stat-accuracy').textContent = (data.overall_accuracy * 100).toFixed(1) + '%';
-        document.getElementById('stat-tool-correctness').textContent = (data.tool_correctness * 100).toFixed(1) + '%';
-        document.getElementById('stat-latency').textContent = Math.round(data.average_latency_ms) + ' ms';
-        document.getElementById('last-updated').textContent = 'Last Updated: ' + new Date().toLocaleTimeString();
+      <!-- Regression Panel -->
+      <section id="regression" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-arrow-left-right me-2"></i>Regression &amp; Evaluation Runs</h5>
+        <div class="card shadow-sm regression-card mb-3">
+          <div class="card-header fw-semibold">Recent Evaluation Runs</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm mb-0">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Run ID</th><th>Agent</th><th>Scenarios</th>
+                    <th>Passed</th><th>Failed</th><th>Accuracy</th>
+                    <th>Safety Violations</th><th>Tool Failures</th>
+                  </tr>
+                </thead>
+                <tbody id="runs-table">
+                  <tr><td colspan="8" class="text-center text-muted py-3">Loading runs...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card shadow-sm">
+          <div class="card-header fw-semibold">
+            <i class="bi bi-info-circle me-1"></i>
+            Regression Detection
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-2">Run regression detection by comparing a baseline and current benchmark:</p>
+            <code class="d-block bg-light p-2 rounded">POST /api/v1/benchmarks/regression</code>
+            <p class="text-muted mt-2 mb-0 small">Detects: accuracy degradation ≥5%, tool correctness ≥5%, new scenario failures, new safety violations, new tool failures.</p>
+          </div>
+        </div>
+      </section>
 
-        // Update Runs Table
-        const runsTbody = document.getElementById('runs-table-body');
-        if (data.runs && data.runs.length > 0) {
-          runsTbody.innerHTML = data.runs.map(run => `
-            <tr>
-              <td class="fw-bold">${run.run_id}</td>
-              <td><span class="badge bg-secondary">${run.agent_id}</span></td>
-              <td><span class="badge bg-${run.status === 'completed' ? 'success' : 'warning'}">${run.status}</span></td>
-              <td>${run.passed_count}/${run.total_scenarios} Passed</td>
-              <td><span class="fw-semibold text-${run.overall_accuracy >= 0.8 ? 'success' : 'danger'}">${(run.overall_accuracy * 100).toFixed(1)}%</span></td>
-              <td>${(run.tool_correctness * 100).toFixed(1)}%</td>
-              <td>${Math.round(run.average_latency_ms)} ms</td>
-              <td><button class="btn btn-sm btn-outline-info" onclick="viewRunDetails('${run.run_id}')">View</button></td>
-            </tr>
-          `).join('');
-        }
+      <!-- Findings Register -->
+      <section id="findings" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3"><i class="bi bi-bug me-2"></i>Findings Register</h5>
+        <div class="row g-3 mb-3">
+          <div class="col-md-3"><div class="card shadow-sm"><div class="card-body text-center"><div class="text-muted small">Critical</div><div class="h3 text-danger" id="find-critical">–</div></div></div></div>
+          <div class="col-md-3"><div class="card shadow-sm"><div class="card-body text-center"><div class="text-muted small">High</div><div class="h3 text-warning" id="find-high">–</div></div></div></div>
+          <div class="col-md-3"><div class="card shadow-sm"><div class="card-body text-center"><div class="text-muted small">Medium</div><div class="h3 text-info" id="find-medium">–</div></div></div></div>
+          <div class="col-md-3"><div class="card shadow-sm"><div class="card-body text-center"><div class="text-muted small">Open Findings</div><div class="h3 text-secondary" id="find-open">–</div></div></div></div>
+        </div>
+        <div class="card shadow-sm">
+          <div class="card-header">Recent Findings</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm mb-0">
+                <thead class="table-dark">
+                  <tr><th>ID</th><th>Severity</th><th>Category</th><th>Title</th><th>Scenario</th><th>Status</th></tr>
+                </thead>
+                <tbody id="findings-table">
+                  <tr><td colspan="6" class="text-center text-muted py-3">Loading findings...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        // Update Findings Table
-        const findingsTbody = document.getElementById('findings-table-body');
-        if (data.findings && data.findings.length > 0) {
-          findingsTbody.innerHTML = data.findings.map(f => `
-            <tr>
-              <td class="fw-bold">${f.finding_id}</td>
-              <td><span class="badge badge-${f.severity}">${f.severity.toUpperCase()}</span></td>
-              <td><span class="badge bg-light text-dark">${f.category}</span></td>
-              <td>${f.title}</td>
-              <td>${f.description}</td>
-              <td class="text-muted small">${f.recommendation || 'N/A'}</td>
-            </tr>
-          `).join('');
-        }
+      <!-- Drift Alerts -->
+      <section id="alerts" class="mb-4">
+        <h5 class="text-uppercase text-muted fw-semibold mb-3">
+          <i class="bi bi-bell me-2"></i>Quality Drift Alerts
+          <span class="badge bg-warning text-dark ms-2" id="alert-count-badge">0</span>
+        </h5>
+        <div id="alerts-container">
+          <div class="alert alert-secondary">No open drift alerts. Run <code>POST /api/v1/monitoring/check-drift</code> to detect drift.</div>
+        </div>
+      </section>
 
-        // Render / Update Charts
-        renderCharts(data);
+    </div>
+  </main>
+</div>
 
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-      }
+<!-- Bootstrap + AdminLTE JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/js/adminlte.min.js"></script>
+
+<script>
+const API = '/api/v1';
+
+function pct(v) { return (parseFloat(v) * 100).toFixed(1) + '%'; }
+function cls(v, good=0.9) { return parseFloat(v) >= good ? 'text-success' : parseFloat(v) >= 0.75 ? 'text-warning' : 'text-danger'; }
+function sevBadge(s) {
+  const m = {critical:'danger', high:'warning', medium:'info', low:'secondary'};
+  return `<span class="badge bg-${m[s]||'secondary'}">${s}</span>`;
+}
+function escapeHtml(t) {
+  if (!t) return '';
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadDashboard() {
+  try {
+    const r = await fetch(`${API}/dashboard/summary`);
+    const d = await r.json();
+
+    // KPIs
+    document.getElementById('kpi-runs').textContent = d.total_runs ?? 0;
+    document.getElementById('kpi-scenarios').textContent = d.total_scenarios ?? 0;
+    const acc = d.overall_accuracy ?? 0;
+    const accEl = document.getElementById('kpi-accuracy');
+    accEl.textContent = pct(acc);
+    accEl.className = 'h2 fw-bold ' + cls(acc);
+    document.getElementById('kpi-latency').textContent = (d.average_latency_ms ?? 0).toFixed(0);
+
+    // Quality Metrics
+    const tc = d.tool_correctness ?? 0;
+    const tcEl = document.getElementById('metric-tool');
+    tcEl.textContent = pct(tc);
+    tcEl.className = 'h4 fw-bold ' + cls(tc);
+    document.getElementById('bar-tool').style.width = pct(tc);
+
+    const ac = d.argument_correctness ?? 0;
+    const acEl = document.getElementById('metric-args');
+    acEl.textContent = pct(ac);
+    acEl.className = 'h4 fw-bold ' + cls(ac);
+    document.getElementById('bar-args').style.width = pct(ac);
+
+    const ga = d.grounding_accuracy ?? 0;
+    const gaEl = document.getElementById('metric-grounding');
+    gaEl.textContent = pct(ga);
+    gaEl.className = 'h4 fw-bold ' + cls(ga);
+    document.getElementById('bar-grounding').style.width = pct(ga);
+
+    // Failure Breakdown
+    const totalFailed = (d.runs || []).reduce((s, r) => s + (r.failed_count || 0), 0);
+    document.getElementById('fail-scenario').textContent = totalFailed;
+    document.getElementById('fail-tool').textContent = d.tool_failures ?? 0;
+    document.getElementById('fail-integration').textContent = d.integration_failures ?? 0;
+
+    // Safety — displayed separately, never hidden
+    document.getElementById('safety-total').textContent = d.safety_violations ?? 0;
+    const latest = (d.runs && d.runs.length > 0) ? d.runs[0] : null;
+    document.getElementById('safety-critical').textContent = latest ? (latest.critical_safety_failures_count ?? 0) : '–';
+    document.getElementById('safety-high').textContent = latest ? (latest.high_safety_failures_count ?? 0) : '–';
+    const totalSafety = d.safety_violations ?? 0;
+    const safetyBadge = document.getElementById('safety-badge');
+    if (totalSafety > 0) {
+      safetyBadge.textContent = `${totalSafety} VIOLATION(S) — TRACKED SEPARATELY`;
+      safetyBadge.className = 'badge bg-danger ms-2';
+    } else {
+      safetyBadge.textContent = 'TRACKED SEPARATELY';
+      safetyBadge.className = 'badge bg-success ms-2';
     }
 
-    function renderCharts(data) {
-      // Accuracy Chart
-      const ctxAcc = document.getElementById('accuracyChart').getContext('2d');
-      if (accuracyChart) accuracyChart.destroy();
-      accuracyChart = new Chart(ctxAcc, {
-        type: 'line',
-        data: {
-          labels: data.runs ? data.runs.map(r => r.run_id) : ['Baseline'],
-          datasets: [
-            {
-              label: 'Overall Accuracy %',
-              data: data.runs ? data.runs.map(r => r.overall_accuracy * 100) : [100],
-              borderColor: '#0d6efd',
-              tension: 0.3,
-              fill: false
-            },
-            {
-              label: 'Tool Correctness %',
-              data: data.runs ? data.runs.map(r => r.tool_correctness * 100) : [100],
-              borderColor: '#198754',
-              tension: 0.3,
-              fill: false
-            }
-          ]
-        },
-        options: { responsive: true, scales: { y: { min: 0, max: 100 } } }
-      });
-
-      // Severity Chart
-      const ctxSev = document.getElementById('severityChart').getContext('2d');
-      if (severityChart) severityChart.destroy();
-      const sevCounts = data.severity_counts || { critical: 0, high: 0, medium: 0, low: 0 };
-      severityChart = new Chart(ctxSev, {
-        type: 'doughnut',
-        data: {
-          labels: ['Critical', 'High', 'Medium', 'Low'],
-          datasets: [{
-            data: [sevCounts.critical, sevCounts.high, sevCounts.medium, sevCounts.low],
-            backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#0dcaf0']
-          }]
-        },
-        options: { responsive: true }
-      });
+    // Latest Benchmark
+    if (d.latest_benchmark) {
+      const b = d.latest_benchmark;
+      document.getElementById('benchmark-panel').innerHTML = `
+        <div class="row g-3">
+          <div class="col-md-2"><strong>Benchmark ID</strong><br><code>${escapeHtml(b.benchmark_id)}</code></div>
+          <div class="col-md-2"><strong>Dataset Version</strong><br><span class="badge bg-info">${escapeHtml(b.golden_dataset_version)}</span></div>
+          <div class="col-md-1"><strong>Scenarios</strong><br>${b.total_scenarios}</div>
+          <div class="col-md-1"><strong>Passed</strong><br><span class="text-success fw-bold">${b.passed_count}</span></div>
+          <div class="col-md-1"><strong>Failed</strong><br><span class="text-danger fw-bold">${b.failed_count}</span></div>
+          <div class="col-md-2"><strong>Accuracy</strong><br><span class="${cls(b.accuracy)} fw-bold">${pct(b.accuracy)}</span></div>
+          <div class="col-md-1"><strong>Tool ✓</strong><br>${pct(b.tool_correctness)}</div>
+          <div class="col-md-1"><strong>Args ✓</strong><br>${pct(b.argument_correctness)}</div>
+          <div class="col-md-1"><strong>Safety ⚠</strong><br><span class="${b.safety_violations > 0 ? 'text-danger fw-bold' : 'text-success'}">${b.safety_violations}</span></div>
+        </div>`;
+    } else {
+      document.getElementById('benchmark-panel').innerHTML = '<div class="text-muted">No benchmark data. Run <code>POST /api/v1/benchmarks/run</code></div>';
     }
 
-    async function triggerEvaluationRun() {
-      try {
-        const res = await fetch('/api/v1/runs/execute', { method: 'POST' });
-        const runData = await res.json();
-        alert('Evaluation Run Completed! Run ID: ' + runData.run_id + ' | Accuracy: ' + (runData.overall_accuracy * 100).toFixed(1) + '%');
-        loadDashboardData();
-      } catch (err) {
-        alert('Failed to execute evaluation run: ' + err);
-      }
+    // Findings
+    const sc = d.severity_counts || {};
+    document.getElementById('find-critical').textContent = sc.critical ?? 0;
+    document.getElementById('find-high').textContent = sc.high ?? 0;
+    document.getElementById('find-medium').textContent = sc.medium ?? 0;
+    document.getElementById('find-open').textContent = d.open_findings ?? 0;
+
+    const fBody = document.getElementById('findings-table');
+    if (d.findings && d.findings.length > 0) {
+      fBody.innerHTML = d.findings.slice(0, 20).map(f => `
+        <tr>
+          <td><code>${escapeHtml(f.finding_id)}</code></td>
+          <td>${sevBadge(f.severity)}</td>
+          <td><small>${escapeHtml(f.category)}</small></td>
+          <td>${escapeHtml(f.title)}</td>
+          <td><small><code>${escapeHtml(f.scenario_id || '–')}</code></small></td>
+          <td><span class="badge bg-${f.status==='open'?'danger':'success'}">${escapeHtml(f.status||'open')}</span></td>
+        </tr>`).join('');
+    } else {
+      fBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No findings yet. Run an evaluation to generate findings.</td></tr>';
     }
 
-    // Auto-load on page ready
-    document.addEventListener('DOMContentLoaded', loadDashboardData);
-  </script>
+    // Alerts
+    const alertBadge = document.getElementById('alert-count-badge');
+    const alertCont = document.getElementById('alerts-container');
+    if (d.alerts && d.alerts.length > 0) {
+      alertBadge.textContent = d.alerts.length;
+      alertBadge.className = 'badge bg-danger ms-2';
+      alertCont.innerHTML = d.alerts.map(a => `
+        <div class="alert alert-${a.severity==='critical'?'danger':a.severity==='warning'?'warning':'info'} drift-alert mb-2">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <strong>${escapeHtml(a.metric.toUpperCase())}</strong>
+              <span class="badge bg-${a.severity==='critical'?'danger':'warning'} ms-1">${escapeHtml(a.severity)}</span>
+              <span class="badge bg-secondary ms-1">${escapeHtml(a.alert_id)}</span>
+              <br>${escapeHtml(a.message)}
+            </div>
+            <small class="text-muted ms-3">Δ ${parseFloat(a.observed_delta).toFixed(4)}</small>
+          </div>
+        </div>`).join('');
+    } else {
+      alertBadge.textContent = '0';
+      alertBadge.className = 'badge bg-success ms-2';
+      alertCont.innerHTML = '<div class="alert alert-success">No open drift alerts detected.</div>';
+    }
+
+    // Runs Table
+    const rBody = document.getElementById('runs-table');
+    if (d.runs && d.runs.length > 0) {
+      rBody.innerHTML = d.runs.map(r => `
+        <tr>
+          <td><code>${escapeHtml(r.run_id)}</code></td>
+          <td><small>${escapeHtml(r.agent_id)}</small></td>
+          <td>${r.total_scenarios}</td>
+          <td class="text-success fw-bold">${r.passed_count}</td>
+          <td class="text-danger fw-bold">${r.failed_count}</td>
+          <td class="${cls(r.overall_accuracy)} fw-bold">${pct(r.overall_accuracy)}</td>
+          <td class="${(r.safety_violations_count||0)>0?'text-danger fw-bold':'text-success'}">
+            ${(r.safety_violations_count||0)>0?'⚠ ':''} ${r.safety_violations_count||0}
+          </td>
+          <td>${r.tool_failures_count||0}</td>
+        </tr>`).join('');
+    } else {
+      rBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No runs yet. POST /api/v1/evaluations/run-dataset</td></tr>';
+    }
+
+    document.getElementById('last-refresh').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('Dashboard load error:', e);
+    document.getElementById('last-refresh').textContent = 'Error loading data — is the API running?';
+  }
+}
+
+loadDashboard();
+setInterval(loadDashboard, 30000);
+</script>
 </body>
 </html>
