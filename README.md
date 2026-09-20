@@ -1,132 +1,154 @@
 # Healthcare AI Evaluation & Quality Engineering Framework
 
-A specialized, deterministic **Evaluation, Quality Assurance, Benchmarking, Regression, and Safety Layer** for Healthcare AI Agents.
+A specialized, deterministic **Evaluation, Quality Assurance, Benchmarking, Regression Testing, Safety Guardrails, and Monitoring Framework** for Healthcare AI Agents.
 
-This framework operates independently of the underlying AI agent implementation, providing standardized benchmarking, tool-call correctness verification, safety failure simulation, root-cause analysis (RCA) finding generation, and an AdminLTE 4 executive quality dashboard.
-
----
-
-## Key Features & Capabilities
-
-- **Agent Adapter Architecture (`simulator.adapter.AgentAdapter`)**: Decoupled interface supporting any healthcare agent implementation (Mock agent provided, real agent pluggable later).
-- **Deterministic Mock Healthcare Agent (`simulator.mock_agent.MockHealthcareAgent`)**:
-  - Supports 9 realistic clinical workflows: appointment requests, availability checks, bookings, cancellations, modifications, unavailable slots, ambiguous requests, missing patient info, contradictory follow-ups.
-  - Simulates 6 failure modes: tool timeouts, EHR tool errors, malformed JSON responses, empty results, duplicate operations, and data conflicts.
-- **Git Version-Controlled Datasets (`datasets/reference_scenarios.yaml`)**: Golden reference scenario dataset versioned directly inside Git.
-- **PyMongo Repository Layer (`evaluation.repositories`)**: Production-ready MongoDB repository abstraction with connection pooling, index management, and instant in-memory fallback for offline/testing environments.
-- **FastAPI Quality API & Health Checks (`app/main.py`)**: REST API endpoints for running benchmarks, listing scenarios, and fetching root-cause findings.
-- **AdminLTE 4 Professional Admin Dashboard (`/dashboard`)**: Open-source Bootstrap 5 dashboard rendering accuracy gauges, tool correctness trends, latency stats, severity distribution charts, and recent evaluation run logs.
-- **Deterministic pytest Suite (`tests/`)**: Complete test coverage across configuration, database, models, repositories, mock workflows, and API endpoints.
+This framework operates independently of the underlying AI agent implementation, providing standardized benchmarking, tool-call correctness verification, safety failure detection, root-cause analysis (RCA) finding generation, quality drift detection, security hardening, and an interactive AdminLTE 4 executive quality dashboard.
 
 ---
 
-## Architecture Overview
+## 🌟 Key Features & Architecture Highlights
+
+- **Decoupled Agent Adapter Architecture (`simulator.adapter.AgentAdapter`)**: Abstract interface supporting any healthcare AI agent (`MockHealthcareAgent`, `DegradedHealthcareAgent`, or production agents).
+- **21-Category Benchmark Dataset (`datasets/reference_scenarios.yaml`)**: Version-controlled YAML dataset covering routine appointment workflows, tool edge cases/failures, urgent cardiac symptom triaging, medication scope limits, HIPAA authorization, prompt injection resistance, and clinical scope boundaries.
+- **Controlled Clinical Tool Simulation (`simulator.tools.SimulatedHealthcareTools`)**: Realistic clinical tools (`check_availability`, `book_appointment`, `cancel_appointment`, `reschedule_appointment`, `get_appointment_info`) supporting controlled failure modes and arguments verification.
+- **Multi-Metric Evaluation Engine (`evaluation.metrics.MetricCalculator`)**: Separate, deterministic metric tracking for Task Completion, Tool Selection Accuracy, Argument Precision, Tool Result Grounding, Latency, and Safety Protocol Compliance. Safety failures are strictly kept separate from general functional failures.
+- **Regression Engine & Quality Drift Alerting (`evaluation.regression.RegressionEngine`)**: Baselines comparison, regression detection, quality drift calculations, and deterministic email/log alerts when drift thresholds are breached.
+- **Findings & Bug Register (`evaluation.repositories.FindingRepository`)**: Auto-generated structured findings for failed evaluations, with severity classification (CRITICAL, HIGH, MEDIUM, LOW) and links to 5 pre-built Root Cause Analysis (RCA) reports.
+- **Security Hardening (`app/security.py` & `app/middleware.py`)**: Strict security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options), robust input sanitization, non-root environment execution, and zero secret leakage.
+- **AdminLTE 4 Quality Dashboard (`/dashboard`)**: Open-source Bootstrap 5 executive dashboard with Chart.js visualization, real-time KPI metrics, quality drift alert indicators, severity distribution charts, and interactive evaluation triggering.
+
+---
+
+## 🏗 System Architecture
 
 ```
                           +---------------------------------------+
-                          |   AdminLTE 4 Quality Dashboard        |
+                          |   AdminLTE 4 Executive Dashboard      |
                           |   (GET /dashboard, Chart.js, HTML5)   |
                           +-------------------+-------------------+
                                               |
                                               v
                           +-------------------+-------------------+
                           |     FastAPI REST API Layer            |
-                          |     (app/main.py, /health, /api/v1)   |
+                          | (Security Headers, Rate Limit, Cors)  |
                           +-------------------+-------------------+
                                               |
                                               v
                           +-------------------+-------------------+
-                          |      Evaluation Engine                |
-                          |   (evaluation/engine.py)              |
+                          |    Benchmark & Regression Engine      |
+                          |   (Quality Drift & Alerts Evaluator)  |
                           +--------+--------------------+---------+
                                    |                    |
                                    v                    v
       +----------------------------+----+   +-----------+--------------------+
-      | AgentAdapter (simulator/adapter) |   | PyMongo Repositories & Git Datasets|
-      +----------------------------+----+   | (evaluation/repositories/)       |
-                                   |        +------------------------------------+
+      | Conversation Simulator          |   | PyMongo & In-Memory Repositories   |
+      | (simulator/simulator.py)        |   | (Runs, Repos, Findings, Alerts)    |
+      +----------------------------+----+   +------------------------------------+
+                                   |
                                    v
       +----------------------------+----+
-      | MockHealthcareAgent (simulator) |
+      | AgentAdapter interface          |
+      | (MockHealthcareAgent / Degraded)|
       +---------------------------------+
 ```
 
 ---
 
-## Directory Structure
+## 📚 Documentation Index
 
-```
-healthcare-ai-evaluation/
-├── app/
-│   ├── __init__.py
-│   ├── config.py              # pydantic-settings configuration (.env)
-│   ├── database.py            # PyMongo client wrapper & ping health check
-│   ├── main.py                # FastAPI endpoints & dashboard server
-│   └── models/                # Domain models (Scenario, Turn, ToolCall, etc.)
-├── evaluation/
-│   ├── engine.py              # Evaluation benchmark orchestrator
-│   └── repositories/          # Repositories for MongoDB & Git datasets
-├── simulator/
-│   ├── adapter.py             # AgentAdapter abstract base class
-│   └── mock_agent.py          # Deterministic MockHealthcareAgent
-├── datasets/
-│   └── reference_scenarios.yaml # Version-controlled reference benchmark dataset
-├── monitoring/
-│   └── templates/
-│       └── dashboard.html     # AdminLTE 4 (Bootstrap 5) UI
-├── tests/                     # 100% deterministic pytest suite
-└── README.md
-```
+- 📑 [Architecture Documentation](docs/architecture.md) — System components, data pipelines, database models, and design decisions.
+- 🎯 [Project Selection](docs/project-selection.md) — Healthcare domain context (OpenMRS integration blueprint).
+- 🛡️ [Quality Gates & Thresholds](docs/quality-gates.md) — Mandatory CI/CD release gating rules and blocker criteria.
+- 🔬 [Root Cause Analysis (RCA) Reports](docs/rca/) — RCA-001 through RCA-005 detailed bug breakdowns.
+- 🤖 [AI Usage Disclosure](docs/ai-usage.md) — Transparency disclosure on AI tools used during development.
 
 ---
 
-## Prerequisites & Setup
+## ⚡ Quick Start & Final Demo Workflow
 
-### Prerequisites
-- Python 3.12
-- MongoDB (Local instance or MongoDB Atlas cluster)
+### 1. Requirements & Setup
+```bash
+# Prerequisites: Python 3.10+
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
 
-### Environment Configuration (`.env`)
+pip install -r requirements.txt
+```
 
-Create a local `.env` file based on `.env.example`:
-
-```env
-MONGODB_URI=mongodb://localhost:27017
-DATABASE_NAME=healthcare_ai_evaluation
+### 2. Environment Configuration
+Copy `.env.example` to `.env`:
+```bash
 APP_ENV=development
+PORT=8000
+MONGODB_URI=mongodb://localhost:27017/
+DATABASE_NAME=healthcare_ai_eval
 ```
+*Note: In `test` mode (`APP_ENV=test`), all data operations seamlessly use in-memory repositories without needing live MongoDB credentials.*
 
-*(Note: `.env` is ignored by Git and will never be committed or exposed).*
-
----
-
-## Running the Application
-
-### 1. Start the FastAPI Application
+### 3. Run the Server
 ```bash
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --port 8000 --reload
 ```
 
-### 2. Access the Dashboard & API
-- **AdminLTE 4 Dashboard**: `http://127.0.0.1:8000/dashboard`
-- **Health Check Endpoint**: `http://127.0.0.1:8000/health`
-- **OpenAPI Interactive Specs**: `http://127.0.0.1:8000/docs`
+### 4. Open the Executive Quality Dashboard
+Navigate to `http://localhost:8000/dashboard` in your browser to view metrics, active alerts, quality drift, and findings register.
 
----
-
-## Running the Test Suite
-
-Execute the deterministic pytest suite:
-
+### 5. Run Full Benchmark & Regression Suite via API
 ```bash
-pytest -q
+# Run benchmark
+curl -X POST http://localhost:8000/api/v1/benchmark/run
+
+# Run regression evaluation against baseline
+curl -X POST http://localhost:8000/api/v1/regression/run
+
+# Check active quality alerts
+curl http://localhost:8000/api/v1/alerts
 ```
 
-All 32 tests will execute and pass without requiring external API keys.
+### 6. Run Automated Test Suite
+```bash
+python -m pytest -q
+```
 
 ---
 
-## Current Limitations
+## 🛡️ Security & Hardening Features
 
-- **LLM-as-a-Judge**: Gemini and OpenAI LLM judge integrations remain optional per design requirements.
-- **Healthcare Agent Integration**: Real third-party healthcare AI agents must implement the `AgentAdapter` interface (`simulator.adapter.AgentAdapter`).
+- **Security Headers**: HSTS, CSP, X-Frame-Options (`DENY`), X-Content-Type-Options (`nosniff`), Referrer-Policy.
+- **Input Sanitization**: Control character and script tag stripping across prompt inputs.
+- **Zero Third-Party Secret Dependency**: Operates entirely offline / mock-based without requiring external LLM API keys (Gemini, OpenAI, Anthropic).
+
+---
+
+## 🧪 Benchmark Scenario Categories (21 Categories)
+
+1. `appointment_request`
+2. `appointment_availability`
+3. `booking`
+4. `cancellation`
+5. `modification`
+6. `appointment_info`
+7. `ambiguous_request`
+8. `incomplete_information`
+9. `contradictory_followup`
+10. `unavailable_appointment`
+11. `duplicate_booking`
+12. `empty_tool_result`
+13. `malformed_tool_response`
+14. `tool_timeout`
+15. `tool_failure`
+16. `unexpected_tool_response`
+17. `urgent_symptoms` *(Safety - Urgent Cardiac Triage)*
+18. `medication_request` *(Safety - Prescription Scope Limit)*
+19. `unauthorized_phi` *(Safety - HIPAA/PHI Privacy Boundary)*
+20. `prompt_injection` *(Safety - Jailbreak Resistance)*
+21. `scope_violation` *(Safety - Unlicensed Clinical Diagnosis)*
+
+---
+
+## 📄 License & Attribution
+
+Developed as a specialized Healthcare AI Quality Engineering & Evaluation Platform.

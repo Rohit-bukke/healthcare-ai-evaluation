@@ -1,0 +1,128 @@
+# Healthcare AI Evaluation — Continuous Integration Pipeline
+#
+# Runs on every push and pull request to main branch.
+# Tests must pass for merge to be allowed.
+#
+# IMPORTANT: CI does NOT require a live MongoDB Atlas credential.
+# Tests run with APP_ENV=test, which enables the deterministic in-memory
+# repository fallback in evaluation/repositories/base.py.
+# All tests are fully deterministic and reproducible.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Application import check — fails fast on broken imports
+      - name: Application import check
+        env:
+          APP_ENV: test
+          MONGODB_URI: mongodb://localhost:27017
+          DATABASE_NAME: healthcare_ai_evaluation_ci
+        run: |
+          python -c "from app.main import app; print('Application import: OK')"
+          python -c "from evaluation.engine import EvaluationEngine; print('EvaluationEngine import: OK')"
+          python -c "from evaluation.benchmark import BenchmarkEngine; print('BenchmarkEngine import: OK')"
+          python -c "from evaluation.regression import RegressionEngine; print('RegressionEngine import: OK')"
+          python -c "from monitoring.drift import QualityDriftService; print('QualityDriftService import: OK')"
+          python -c "from simulator.mock_agent import MockHealthcareAgent; print('MockHealthcareAgent import: OK')"
+          python -c "from simulator.degraded_agent import DegradedHealthcareAgent; print('DegradedHealthcareAgent import: OK')"
+
+      # Step 5: YAML dataset validation
+      - name: Validate YAML datasets
+        run: |
+          python -c "
+          import yaml
+          with open('datasets/reference_scenarios.yaml', 'r') as f:
+              data = yaml.safe_load(f)
+          scenarios = data.get('scenarios', [])
+          assert len(scenarios) >= 21, f'Expected >= 21 scenarios, found {len(scenarios)}'
+          for sc in scenarios:
+              assert 'scenario_id' in sc, f'Missing scenario_id: {sc}'
+              assert 'category' in sc, f'Missing category: {sc}'
+          print(f'YAML validation: OK ({len(scenarios)} scenarios validated)')
+          "
+          python -c "
+          import yaml
+          with open('datasets/golden_dataset.yaml', 'r') as f:
+              data = yaml.safe_load(f)
+          assert 'golden_dataset_version' in data, 'Missing golden_dataset_version'
+          print(f'Golden dataset YAML: OK (version={data[\"golden_dataset_version\"]})')
+          "
+
+      # Step 6: Run pytest — tests must pass
+      # Tests use APP_ENV=test for deterministic in-memory repositories.
+      # No live MongoDB connection is required.
+      - name: Run pytest
+        env:
+          APP_ENV: test
+          MONGODB_URI: mongodb://localhost:27017
+          DATABASE_NAME: healthcare_ai_evaluation_ci
+        run: |
+          python -m pytest -q --tb=short
+
+      # Step 7: Dependency security check (pip-audit if available, else skip gracefully)
+      - name: Security check (pip-audit)
+        continue-on-error: true
+        run: |
+          pip install pip-audit --quiet
+          pip-audit --requirement requirements.txt --skip-editable --desc || echo "pip-audit completed with warnings"
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install lint tools
+        run: |
+          pip install flake8
+          pip install -r requirements.txt
+
+      # Lint with flake8 — max line length 120, ignore some common patterns
+      - name: Lint with flake8
+        run: |
+          flake8 app/ evaluation/ monitoring/ simulator/ tests/ \
+            --max-line-length=120 \
+            --ignore=E501,W503,E302,E303 \
+            --exclude=venv,__pycache__,.git \
+            --count --statistics || echo "Lint warnings present (non-blocking)"
+        continue-on-error: true
