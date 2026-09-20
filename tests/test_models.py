@@ -18,7 +18,7 @@ def test_scenario_model():
         description="Test description",
         category="booking",
         initial_prompt="Book an appointment",
-        expected_outcome="Confirmed"
+        expected_behavior="Confirmed"
     )
     assert sc.scenario_id == "SCN-100"
     assert sc.turn_count == 1
@@ -80,9 +80,9 @@ def test_evaluation_models():
 def test_regression_result_model():
     reg = RegressionResult(
         regression_id="REG-01",
-        run_id="RUN-02",
-        baseline_run_id="RUN-01",
-        regression_detected=False
+        baseline_benchmark_id="BMK-01",
+        current_benchmark_id="BMK-02",
+        regressions_detected=False
     )
     assert reg.regression_id == "REG-01"
-    assert reg.regression_detected is False
+    assert reg.regressions_detected is False

@@ -16,7 +16,7 @@ def test_scenario_repository_git_dataset_loading():
     assert len(scenarios) >= 10
     sc01 = repo.get_by_id("SCN-001")
     assert sc01 is not None
-    assert sc01.title == "Standard Cardiology Appointment Request"
+    assert sc01.title == "Standard Appointment Request"
     assert sc01.category == "appointment_request"
 
 
